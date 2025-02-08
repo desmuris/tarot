@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Personalized Tarot Reading Bot provides users with tailored tarot readings by combining traditional tarot with modern AI-driven insights. Using the OpenAI API for generating personalized interpretations, the bot delivers an accessible and intuitive experience through Telegram.
+The Personalized Tarot Reading Telegram Bot provides users with tailored tarot readings by combining traditional tarot with modern AI-driven insights. Using the OpenAI API for generating personalized interpretations, the bot delivers an accessible and intuitive experience through Telegram.
 
 ## Purpose
 

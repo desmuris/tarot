@@ -82,6 +82,13 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
     - ROI projections
     - Timeline milestones
 
+13. [Ukraine Pricing Strategy](ukraine-pricing-strategy.md)
+    - Market context analysis
+    - Localized pricing structure
+    - Regional adaptations
+    - Wartime considerations
+    - Implementation plan
+
 ## Getting Started
 
 1. Start with the [Overview](overview.md) to understand the system's purpose and features
@@ -108,3 +115,4 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
 - [Security](security.md) for security measures
 - [Credit System](credit-system.md) for payment and credits
 - [Marketing Plan](marketing-plan.md) for business strategy
+- [Ukraine Pricing Strategy](ukraine-pricing-strategy.md) for market-specific pricing

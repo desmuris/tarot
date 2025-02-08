@@ -73,6 +73,15 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
     - Balance management
     - Transaction history
 
+### Business Documentation
+12. [Marketing Plan](marketing-plan.md)
+    - Target market analysis
+    - Marketing strategy
+    - Pricing strategy
+    - Distribution channels
+    - ROI projections
+    - Timeline milestones
+
 ## Getting Started
 
 1. Start with the [Overview](overview.md) to understand the system's purpose and features
@@ -98,3 +107,4 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
 - [Monitoring](monitoring.md) for system observability
 - [Security](security.md) for security measures
 - [Credit System](credit-system.md) for payment and credits
+- [Marketing Plan](marketing-plan.md) for business strategy

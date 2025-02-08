@@ -1,105 +1,246 @@
 # System Architecture
 
 ## Overview
-
-The system employs a modular monolith architecture, organizing functionality into clear boundaries while maintaining simplicity and ease of maintenance.
+The Tarot Reading Bot system employs a modular monolith architecture, organizing functionality into clear boundaries while maintaining simplicity and ease of maintenance. The system is designed with security, scalability, and reliability as core principles.
 
 ## Core Modules
 
 ### 1. Bot Interface Module
-- Handles Telegram API integration
-- Manages user commands and responses
-- Maintains user sessions
-- Routes requests to appropriate modules
-- Handles rate limiting and throttling
-
-### 2. Tarot Core Module
-- Manages card selection and spreads
-- Coordinates reading generation
-- Handles OpenAI API integration
-- Processes interpretation results
-- Manages deck preferences
-
-### 3. Data Management Module
-- Handles database operations
-- Manages caching strategy
-- Stores user data and readings
-- Maintains credit balances
-- Handles data retention policies
-
-### 4. Payment Module
-- Processes payments securely
-- Manages credit system
-- Handles subscription tiers
-- Records detailed transactions
-- Manages refunds and disputes
-
-## Module Communication
-
-### Communication Flow
 ```python
-class ModuleManager:
-    """Coordinates communication between modules"""
+class BotInterface:
+    """Handles Telegram bot interactions and request routing"""
     
     def __init__(self):
-        self.bot_interface = BotInterface()
-        self.tarot_core = TarotCore()
-        self.data_manager = DataManager()
-        self.payment_handler = PaymentHandler()
-        self.error_handler = ErrorHandler()
+        self.auth_handler = APIAuthenticator()
+        self.rate_limiter = RateLimiter()
+        self.session_manager = SessionManager()
+    
+    async def handle_request(
+        self,
+        update: Update,
+        context: Context
+    ) -> Response:
+        """
+        Process incoming bot requests
+        
+        Args:
+            update: Telegram update object
+            context: Request context
+            
+        Returns:
+            Response object
+        """
+        try:
+            # Authenticate request
+            auth_result = await self.auth_handler.authenticate_request(
+                update.effective_user.id
+            )
+            if not auth_result.success:
+                return ErrorResponse("Authentication failed")
+            
+            # Check rate limits
+            await self.rate_limiter.check_rate_limit(
+                auth_result.user_id,
+                "bot_request"
+            )
+            
+            # Route request
+            handler = self.get_request_handler(update)
+            response = await handler.handle(update, context)
+            
+            # Log successful request
+            await self.log_request(
+                auth_result.user_id,
+                "success",
+                update.effective_message.text
+            )
+            
+            return response
+            
+        except Exception as e:
+            await self.handle_error(e, update)
+            return ErrorResponse(str(e))
+```
 
-    async def handle_reading_request(
+### 2. Tarot Core Module
+```python
+class TarotCore:
+    """Manages reading generation and interpretation"""
+    
+    def __init__(self):
+        self.openai_client = OpenAIClient()
+        self.spread_manager = SpreadManager()
+        self.interpretation_engine = InterpretationEngine()
+    
+    async def generate_reading(
         self,
         user_id: int,
         spread_type: str,
         question: str
-    ) -> ReadingResult:
+    ) -> Reading:
         """
-        Coordinates a reading request across modules:
-        1. Validate request and user status
-        2. Verify and reserve credits
-        3. Generate reading
-        4. Store result
-        5. Update balance
-        6. Handle any failures
+        Generate a tarot reading
+        
+        Args:
+            user_id: User identifier
+            spread_type: Type of spread requested
+            question: User's question
+            
+        Returns:
+            Reading object containing the interpretation
         """
-        async with self.data_manager.transaction() as transaction:
+        try:
+            # Validate spread type
+            spread = await self.spread_manager.get_spread(spread_type)
+            if not spread:
+                raise InvalidSpreadError()
+            
+            # Select cards
+            cards = await self.spread_manager.select_cards(spread)
+            
+            # Generate interpretation
+            interpretation = await self.interpretation_engine.interpret(
+                cards=cards,
+                spread=spread,
+                question=question
+            )
+            
+            # Create reading object
+            reading = Reading(
+                user_id=user_id,
+                spread_type=spread_type,
+                cards=cards,
+                interpretation=interpretation,
+                timestamp=datetime.utcnow()
+            )
+            
+            return reading
+            
+        except Exception as e:
+            logger.error(f"Reading generation failed: {str(e)}")
+            raise ReadingGenerationError(str(e))
+```
+
+### 3. Data Management Module
+```python
+class DataManager:
+    """Handles database operations and caching"""
+    
+    def __init__(self):
+        self.db = PostgreSQLConnection()
+        self.cache = RedisCache()
+        self.encryption = DataEncryption()
+    
+    async def store_reading(
+        self,
+        reading: Reading
+    ) -> bool:
+        """
+        Store reading with proper encryption
+        
+        Args:
+            reading: Reading object to store
+            
+        Returns:
+            Boolean indicating success
+        """
+        try:
+            # Encrypt sensitive data
+            encrypted_data = await self.encryption.encrypt_data(
+                reading.to_dict(),
+                "reading"
+            )
+            
+            # Store in database
+            await self.db.store_reading(
+                user_id=reading.user_id,
+                encrypted_data=encrypted_data
+            )
+            
+            # Update cache
+            await self.cache.set_reading(
+                reading.id,
+                encrypted_data,
+                ttl=3600  # 1 hour
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Reading storage failed: {str(e)}")
+            raise DataStorageError(str(e))
+```
+
+### 4. Payment Module
+```python
+class PaymentHandler:
+    """Manages payment processing and credit system"""
+    
+    def __init__(self):
+        self.payment_gateway = PaymentGateway()
+        self.credit_manager = CreditManager()
+        self.transaction_manager = TransactionManager()
+    
+    async def process_credit_purchase(
+        self,
+        user_id: int,
+        package: str,
+        payment_method: str
+    ) -> PaymentResult:
+        """
+        Process credit package purchase
+        
+        Args:
+            user_id: User identifier
+            package: Credit package identifier
+            payment_method: Payment method to use
+            
+        Returns:
+            PaymentResult object
+        """
+        async with self.transaction_manager.transaction() as txn:
             try:
-                # Validate user status
-                user = await self.data_manager.get_user(user_id)
-                if not user.is_active:
-                    return ReadingResult(error="Account inactive")
-
-                # Verify and reserve credits
-                if not await self.payment_handler.verify_credits(user_id):
-                    return ReadingResult(error="Insufficient credits")
+                # Validate package
+                package_info = await self.credit_manager.get_package(package)
+                if not package_info:
+                    raise InvalidPackageError()
                 
-                await self.payment_handler.reserve_credits(user_id)
-
-                # Generate reading
-                reading = await self.tarot_core.generate_reading(
-                    spread_type,
-                    question,
-                    user.preferences
+                # Process payment
+                payment_result = await self.payment_gateway.process_payment(
+                    amount=package_info.price,
+                    currency="USD",
+                    payment_method=payment_method
                 )
                 
-                # Store result
-                await self.data_manager.save_reading(user_id, reading)
+                if payment_result.success:
+                    # Add credits
+                    await self.credit_manager.add_credits(
+                        user_id=user_id,
+                        amount=package_info.credits
+                    )
+                    
+                    # Record transaction
+                    await self.transaction_manager.record_transaction(
+                        user_id=user_id,
+                        type="credit_purchase",
+                        amount=package_info.price,
+                        credits=package_info.credits
+                    )
+                    
+                    return PaymentResult(
+                        success=True,
+                        transaction_id=payment_result.id
+                    )
                 
-                # Update credits
-                await self.payment_handler.deduct_credits(user_id)
+                raise PaymentProcessingError(payment_result.error)
                 
-                await transaction.commit()
-                return ReadingResult(reading=reading)
-
             except Exception as e:
-                await transaction.rollback()
-                return await self.error_handler.handle_error(e)
+                await txn.rollback()
+                logger.error(f"Payment processing failed: {str(e)}")
+                raise PaymentError(str(e))
 ```
 
 ## Error Handling
-
-### Error Management System
 ```python
 class ErrorHandler:
     """Implements comprehensive error handling"""
@@ -126,10 +267,63 @@ class ErrorHandler:
             "log_level": "error"
         }
     }
+    
+    async def handle_error(
+        self,
+        error: Exception,
+        context: dict = None
+    ) -> ErrorResult:
+        """
+        Handle system errors with proper logging and recovery
+        
+        Args:
+            error: Exception that occurred
+            context: Error context
+            
+        Returns:
+            ErrorResult object
+        """
+        try:
+            # Classify error
+            error_type = self.classify_error(error)
+            error_config = self.ERROR_TYPES[error_type]
+            
+            # Log error
+            logger.log(
+                error_config["log_level"],
+                f"Error occurred: {str(error)}",
+                extra=context
+            )
+            
+            # Attempt recovery if retryable
+            if error_config["retryable"]:
+                recovery_result = await self.attempt_recovery(
+                    error_type,
+                    error,
+                    context
+                )
+                if recovery_result.success:
+                    return ErrorResult(
+                        handled=True,
+                        recovered=True
+                    )
+            
+            # Return error result
+            return ErrorResult(
+                handled=True,
+                recovered=False,
+                user_message=error_config["user_message"]
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling failed: {str(e)}")
+            return ErrorResult(
+                handled=False,
+                error="System error"
+            )
 ```
 
 ## System Architecture Diagram
-
 ```
                                     [HTTPS/SSL]
                                          │
@@ -151,31 +345,44 @@ class ErrorHandler:
 ## Component Details
 
 ### 1. Load Balancer
-- Basic HTTP/HTTPS routing
-- SSL termination
-- Health checks
+- HTTPS/SSL termination
+- Request routing
+- Health checking
+- Rate limiting
+- DDoS protection
 
 ### 2. Application Server
 - Python FastAPI application
 - Modular monolith structure
 - Environment-based configuration
+- Comprehensive error handling
+- Security middleware
 
 ### 3. PostgreSQL
-- User data
+- User data storage
 - Reading history
 - Transaction records
+- Encrypted sensitive data
+- Audit logging
 
 ### 4. Redis
-- Session caching
+- Session management
 - Rate limiting
-- Basic result caching
+- Result caching
+- Job queues
+- Real-time metrics
 
 ### 5. Monitoring
-- Basic health metrics
-- Error logging
+- System health metrics
+- Error tracking
 - Performance monitoring
+- Security monitoring
+- Business metrics
 
 ## Related Documentation
-- [Data Management](data-management.md) - Detailed database and caching implementation
-- [Deployment](deployment.md) - Deployment configuration and process
-- [Development Guide](development.md) - Setup and development workflow
+- [Data Management](data-management.md) - Database and caching details
+- [Security](security.md) - Security measures
+- [Error Handling](error-handling.md) - Error management
+- [Monitoring](monitoring.md) - System monitoring
+- [Credit System](credit-system.md) - Credit management
+- [Payment System](payment-system.md) - Payment processing

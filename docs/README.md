@@ -35,25 +35,53 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
    - Reading interpretation
    - Questionnaire system
 
+### Security & Operations
+6. [Security](security.md)
+   - Authentication
+   - Data protection
+   - API security
+   - Compliance measures
+
+7. [Error Handling](error-handling.md)
+   - Error types
+   - Exception handling
+   - Recovery procedures
+   - Logging strategy
+
+8. [Monitoring](monitoring.md)
+   - System metrics
+   - Performance monitoring
+   - Alert configuration
+   - Health checks
+
 ### Implementation Documentation
-6. [Deployment](deployment.md)
+9. [Deployment](deployment.md)
    - Configuration
    - Component details
    - Deployment process
-   - Monitoring
+   - Environment setup
 
-7. [Development Guide](development.md)
-   - Project structure
-   - Setup instructions
-   - Testing strategy
-   - Future considerations
+10. [Development Guide](development.md)
+    - Project structure
+    - Setup instructions
+    - Testing strategy
+    - Future considerations
+
+11. [Credit System](credit-system.md)
+    - Credit types
+    - Pricing models
+    - Balance management
+    - Transaction history
 
 ## Getting Started
 
 1. Start with the [Overview](overview.md) to understand the system's purpose and features
 2. Review the [System Architecture](architecture.md) for technical design
-3. Explore specific components based on your area of interest
-4. Consult the [Development Guide](development.md) for implementation details
+3. Explore specific components based on your area of interest:
+   - For development setup: [Development Guide](development.md)
+   - For deployment process: [Deployment](deployment.md)
+   - For security measures: [Security](security.md)
+   - For monitoring setup: [Monitoring](monitoring.md)
 
 ## Document Conventions
 
@@ -61,3 +89,12 @@ Welcome to the Tarot Reading Bot documentation. This documentation is organized 
 - Cross-references are provided where components interact
 - Code examples are included for technical implementation
 - Configuration examples are provided for deployment
+- Error handling and logging examples are included where relevant
+- Security considerations are highlighted in each component
+
+## Related Documentation
+
+- [Error Handling](error-handling.md) for exception management
+- [Monitoring](monitoring.md) for system observability
+- [Security](security.md) for security measures
+- [Credit System](credit-system.md) for payment and credits
